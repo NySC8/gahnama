@@ -1,0 +1,5 @@
+<resources>
+    <style name="Theme.Gahnama" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">#F7F8F3</item>
+    </style>
+</resources>
