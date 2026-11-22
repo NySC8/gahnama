@@ -38,7 +38,6 @@ jobs:
 
   site:
     if: github.event_name != 'pull_request'
-    needs: apk
     runs-on: ubuntu-latest
     environment:
       name: github-pages
