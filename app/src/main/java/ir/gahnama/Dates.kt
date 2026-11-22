@@ -2,7 +2,7 @@ package ir.gahnama
 
 import android.icu.util.Calendar
 import android.icu.util.IslamicCalendar
-import android.icu.util.PersianCalendar
+import android.icu.util.ULocale
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -17,13 +17,14 @@ object Dates {
     val gregMonths = listOf("ژانویه", "فوریه", "مارس", "آوریل", "مه", "ژوئن", "ژوئیه", "اوت", "سپتامبر", "اکتبر", "نوامبر", "دسامبر")
     val weekdays = listOf("شنبه", "یکشنبه", "دوشنبه", "سه‌شنبه", "چهارشنبه", "پنجشنبه", "جمعه")
 
+    private fun persian(): Calendar = Calendar.getInstance(ULocale("fa_IR@calendar=persian"))
     private val zone get() = ZoneId.systemDefault()
     private fun ms(d: LocalDate) = d.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
 
     /** hijriOffset: اصلاح اختلاف رؤیت هلال (۲- تا ۲+ روز) */
     fun info(date: LocalDate, hijriOffset: Int = 0): DayInfo {
         val t = ms(date)
-        val p = PersianCalendar().apply { timeInMillis = t }
+        val p = persian().apply { timeInMillis = t }
         val h = IslamicCalendar().apply {
             calculationType = IslamicCalendar.CalculationType.ISLAMIC_UMALQURA
             timeInMillis = t + hijriOffset * 86_400_000L
@@ -38,11 +39,11 @@ object Dates {
     }
 
     fun fromPersian(y: Int, m: Int, d: Int): LocalDate {
-        val c = PersianCalendar().apply { clear(); set(y, m - 1, d); set(Calendar.HOUR_OF_DAY, 12) }
+        val c = persian().apply { clear(); set(y, m - 1, d); set(Calendar.HOUR_OF_DAY, 12) }
         return Instant.ofEpochMilli(c.timeInMillis).atZone(zone).toLocalDate()
     }
 
-    fun monthLength(y: Int, m: Int) = PersianCalendar().apply { clear(); set(y, m - 1, 1) }.getActualMaximum(Calendar.DAY_OF_MONTH)
+    fun monthLength(y: Int, m: Int) = persian().apply { clear(); set(y, m - 1, 1) }.getActualMaximum(Calendar.DAY_OF_MONTH)
     fun firstColumn(y: Int, m: Int) = weekdays.indexOf(info(fromPersian(y, m, 1)).weekday)
 }
 
