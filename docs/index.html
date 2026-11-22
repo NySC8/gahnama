@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>گاه‌نما | تقویم مینیمال فارسی</title>
+<meta name="description" content="گاه‌نما؛ تقویم روزانهٔ شمسی، میلادی و قمری برای اندروید.">
+<meta name="theme-color" content="#285642">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<link rel="preload" href="fonts/vazirmatn-regular.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+@font-face{font-family:Vazirmatn;font-weight:400;font-display:swap;src:url(fonts/vazirmatn-regular.woff2) format("woff2")}
+@font-face{font-family:Vazirmatn;font-weight:500;font-display:swap;src:url(fonts/vazirmatn-medium.woff2) format("woff2")}
+@font-face{font-family:Vazirmatn;font-weight:600;font-display:swap;src:url(fonts/vazirmatn-semibold.woff2) format("woff2")}
+@font-face{font-family:Vazirmatn;font-weight:700;font-display:swap;src:url(fonts/vazirmatn-bold.woff2) format("woff2")}
+:root{--p:#285642;--s:#47745B;--bg:#F7F8F3;--card:#fff;--tx:#202B25;--mu:#A7B9A8;--soft:#EAEFE8;--line:#e3e9e1;--red:#B5483A}
+@media(prefers-color-scheme:dark){:root{--p:#7FB69A;--s:#47745B;--bg:#111A15;--card:#18231D;--tx:#E6EDE8;--mu:#5E7568;--soft:#223028;--line:#223028;--red:#E08A7C}}
+*{box-sizing:border-box;margin:0}
+html{scroll-behavior:smooth}
+body{font-family:Vazirmatn,Tahoma,sans-serif;background:var(--bg);color:var(--tx);line-height:1.9}
+.wrap{max-width:1000px;margin:0 auto;padding:0 24px}
+nav{display:flex;align-items:center;gap:12px;padding:24px 0}
+nav img{width:40px;height:40px;border-radius:11px}
+nav b{font-size:1.15rem;color:var(--p);flex:1}
+nav a{color:var(--tx);text-decoration:none;font-size:.95rem;opacity:.75}
+nav a:hover{opacity:1}
+.hero{display:grid;grid-template-columns:1.1fr .9fr;gap:48px;align-items:center;padding:56px 0 72px}
+h1{font-size:3.2rem;line-height:1.3;font-weight:700;color:var(--p)}
+.lead{font-size:1.15rem;margin:16px 0 32px;max-width:440px;opacity:.85}
+.actions{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.btn{display:inline-flex;align-items:center;gap:8px;background:var(--p);color:var(--bg);padding:14px 32px;border-radius:16px;text-decoration:none;font-weight:600;font-size:1.05rem;transition:transform .15s}
+.btn:hover{transform:translateY(-2px)}
+.link{color:var(--p);text-decoration:none;font-weight:500}
+.meta{color:var(--mu);font-size:.85rem;margin-top:14px;min-height:1.7em}
+.phone{width:280px;margin:0 auto;background:var(--card);border:1px solid var(--line);border-radius:36px;padding:28px 20px 20px;text-align:center}
+.phone .wd{color:var(--s);font-weight:600;font-size:1.2rem}
+.phone .num{font-size:6.5rem;line-height:1.2;font-weight:700;color:var(--p)}
+.phone .mo{font-weight:600;font-size:1.2rem}
+.mini{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:20px}
+.mini div{background:var(--soft);border-radius:16px;padding:10px 6px;font-size:.82rem}
+.mini small{display:block;color:var(--mu);font-size:.72rem}
+.soon{margin-top:10px;background:var(--soft);border-radius:16px;padding:12px;font-size:.8rem;color:var(--mu)}
+.feat{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:16px;padding-bottom:72px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:24px;padding:26px}
+.card h3{color:var(--p);font-size:1.1rem;margin-bottom:4px}
+.card p{font-size:.95rem;opacity:.8}
+footer{border-top:1px solid var(--line);padding:28px 0 40px;color:var(--mu);font-size:.85rem;display:flex;justify-content:space-between;flex-wrap:wrap;gap:8px}
+footer a{color:inherit}
+@media(max-width:760px){.hero{grid-template-columns:1fr;text-align:center;padding-top:24px}.lead{margin-inline:auto}.actions{justify-content:center}h1{font-size:2.5rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <img src="logo.svg" alt="">
+    <b>گاه‌نما</b>
+    <a href="https://github.com/NySC8/gahnama">گیت‌هاب</a>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <h1>تاریخ امروز،<br>با یک نگاه.</h1>
+      <p class="lead">تقویم روزانهٔ شمسی، میلادی و قمری برای اندروید؛ ساده، راست‌چین و بدون شلوغی.</p>
+      <div class="actions">
+        <a id="dl" class="btn" href="https://github.com/NySC8/gahnama/releases/latest/download/gahnama.apk">دانلود برای اندروید</a>
+        <a id="rel" class="link" href="https://github.com/NySC8/gahnama/releases/latest">نسخه‌ها و تغییرات ←</a>
+      </div>
+      <p class="meta" id="meta">اندروید ۸ به بالا</p>
+    </div>
+
+    <div class="phone" aria-label="پیش‌نمایش برنامه">
+      <div class="wd" id="wd">امروز</div>
+      <div class="num" id="num">۱</div>
+      <div class="mo" id="mo">گاه‌نما</div>
+      <div class="mini">
+        <div><small>میلادی</small><span id="g">—</span></div>
+        <div><small>قمری</small><span id="h">—</span></div>
+      </div>
+      <div class="soon">مناسبت‌ها در نسخه‌های بعدی</div>
+    </div>
+  </section>
+
+  <section class="feat">
+    <div class="card"><h3>سه تقویم در یک نگاه</h3><p>تاریخ شمسی، میلادی و قمری کنار هم.</p></div>
+    <div class="card"><h3>طراحی مینیمال</h3><p>رنگ‌های آرام، گوشه‌های نرم و تایپوگرافی فارسی.</p></div>
+    <div class="card"><h3>بدون اینترنت</h3><p>تاریخ‌ها روی خود دستگاه محاسبه می‌شوند.</p></div>
+  </section>
+
+  <footer><span>گاه‌نما · GAHNAMA</span><span>فونت: <a href="https://github.com/rastikerdar/vazirmatn">وزیرمتن</a></span></footer>
+</div>
+
+<script>
+const REPO = "NySC8/gahnama";
+const $ = id => document.getElementById(id);
+const fa = s => String(s).replace(/\d/g, d => "۰۱۲۳۴۵۶۷۸۹"[d]);
+
+// پیش‌نمایش زنده با تاریخ امروز (Intl مرورگر)
+try {
+  const now = new Date();
+  const parts = (cal, o) => Object.fromEntries(new Intl.DateTimeFormat("fa-IR-u-ca-" + cal, o).formatToParts(now).map(p => [p.type, p.value]));
+  const p = parts("persian", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  $("wd").textContent = p.weekday; $("num").textContent = p.day; $("mo").textContent = p.month + " " + p.year;
+  $("g").textContent = new Intl.DateTimeFormat("fa-IR-u-ca-gregory", { day: "numeric", month: "short", year: "numeric" }).format(now);
+  $("h").textContent = new Intl.DateTimeFormat("fa-IR-u-ca-islamic-umalqura", { day: "numeric", month: "short", year: "numeric" }).format(now);
+} catch (e) {}
+
+// دکمهٔ دانلود: لینک مستقیم APK آخرین ریلیز گیت‌هاب
+fetch(`https://api.github.com/repos/${REPO}/releases/latest`)
+  .then(r => r.ok ? r.json() : Promise.reject())
+  .then(rel => {
+    const apk = rel.assets.find(a => a.name.endsWith(".apk"));
+    if (!apk) return;
+    $("dl").href = apk.browser_download_url;
+    $("rel").href = rel.html_url;
+    $("meta").textContent = `نسخهٔ ${fa(rel.tag_name.replace(/^v/, ""))} · ${fa((apk.size / 1048576).toFixed(1))} مگابایت · اندروید ۸ به بالا`;
+  })
+  .catch(() => {});
+</script>
+</body>
+</html>
