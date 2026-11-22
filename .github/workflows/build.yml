@@ -17,6 +17,8 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: bash scripts/fonts.sh
+      - name: Remove stray non-XML files from res/values
+        run: find app/src/main/res/values -type f ! -name '*.xml' -print -delete
       - uses: actions/setup-java@v4
         with: { distribution: temurin, java-version: 17 }
       - uses: gradle/actions/setup-gradle@v4
