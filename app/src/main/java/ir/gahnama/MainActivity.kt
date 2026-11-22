@@ -9,7 +9,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.unit.dp
@@ -26,21 +26,25 @@ private enum class Tab(val label: String, val icon: ImageVector) {
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Prefs.init(this); Events.load(this); Notifier.refresh(this)
         setContent { GahnamaTheme { App() } }
     }
 }
 
-@androidx.compose.runtime.Composable
+@Composable
 private fun App() {
+    val cs = MaterialTheme.colorScheme
     val nav = rememberNavController()
     val current = nav.currentBackStackEntryAsState().value?.destination?.route
     Scaffold(
-        containerColor = MaterialTheme.colorScheme.background,
+        containerColor = cs.background,
         bottomBar = {
-            NavigationBar(containerColor = MaterialTheme.colorScheme.surface, tonalElevation = 0.dp) {
+            NavigationBar(containerColor = cs.surface, tonalElevation = 0.dp) {
                 Tab.entries.forEach { t ->
                     NavigationBarItem(
-                        selected = current == t.name, label = { Text(t.label) }, icon = { Icon(t.icon, t.label) },
+                        selected = current == t.name, label = { Text(t.label, style = MaterialTheme.typography.labelMedium) },
+                        icon = { Icon(t.icon, t.label) },
+                        colors = NavigationBarItemDefaults.colors(indicatorColor = cs.surfaceVariant, selectedIconColor = cs.primary, selectedTextColor = cs.primary),
                         onClick = { nav.navigate(t.name) { popUpTo(Tab.Home.name); launchSingleTop = true } },
                     )
                 }
