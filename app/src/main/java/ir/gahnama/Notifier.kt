@@ -48,12 +48,14 @@ object Notifier {
         nm.notify(ID, n)
     }
 
+    /** آلارم نیمه‌شب با RTC_WAKEUP (گوشی را از خواب بیدار می‌کند)؛ هر بار اجرا، آلارم بعدی را می‌گذارد. */
     private fun schedule(c: Context) {
         val am = c.getSystemService(AlarmManager::class.java)
         val pi = PendingIntent.getBroadcast(c, 1, Intent(c, DayReceiver::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
         if (!Prefs.notif) { am.cancel(pi); return }
-        val t = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() + 30_000
-        am.setAndAllowWhileIdle(AlarmManager.RTC, t, pi)
+        val t = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() + 5_000
+        if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi)
+        else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi)
     }
 
     /** مربع گوشه‌گرد با عدد روز؛ در نوار وضعیت فقط خط‌دور، در اعلان توپر. */

@@ -1,85 +1,153 @@
 package ir.gahnama
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.flow.MutableStateFlow
-import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
 import java.time.LocalDate
 
-data class CalState(val y: Int, val m: Int, val selected: LocalDate)
-
 class CalendarViewModel : ViewModel() {
-    val state = LocalDate.now().let { t -> Dates.info(t).fa.let { MutableStateFlow(CalState(it.y, it.m, t)) } }
-    fun month(step: Int) = state.update {
-        val n = it.m - 1 + step
-        it.copy(y = it.y + Math.floorDiv(n, 12), m = Math.floorMod(n, 12) + 1)
-    }
-    fun select(d: LocalDate) = state.update { it.copy(selected = d) }
+    val selected = MutableStateFlow(LocalDate.now())
+    fun select(d: LocalDate) { selected.value = d }
+}
+
+private const val MID = 600 // صفحهٔ وسط = ماه جاری؛ ۶۰۰ ماه به هر طرف
+
+/** عنوان فرعی ماه: ماه‌های میلادی و قمری که با این ماه شمسی هم‌پوشانی دارند */
+private fun span(y: Int, m: Int): String {
+    val a = Dates.fromPersian(y, m, 1)
+    val b = Dates.fromPersian(y, m, Dates.monthLength(y, m))
+    val g = if (a.monthValue == b.monthValue) "${Dates.gregMonths[a.monthValue - 1]} ${a.year.fa()}"
+            else "${Dates.gregMonths[a.monthValue - 1]} – ${Dates.gregMonths[b.monthValue - 1]} ${b.year.fa()}"
+    if (!Prefs.hijri) return g
+    val ha = Dates.info(a, Prefs.offset).hijri; val hb = Dates.info(b, Prefs.offset).hijri
+    val h = if (ha.m == hb.m) "${Dates.hijriMonths[ha.m - 1]} ${ha.y.fa()}" else "${Dates.hijriMonths[ha.m - 1]} – ${Dates.hijriMonths[hb.m - 1]} ${hb.y.fa()}"
+    return "$g · $h"
 }
 
 @Composable
 fun CalendarScreen(vm: CalendarViewModel = viewModel()) {
-    val st by vm.state.collectAsState()
     val cs = MaterialTheme.colorScheme
+    val sel by vm.selected.collectAsState()
     val today = LocalDate.now()
-    val first = Dates.firstColumn(st.y, st.m)
-    val count = Dates.monthLength(st.y, st.m)
-    val days = remember(st.y, st.m, Prefs.offset, Prefs.world, Prefs.religious) {
-        (1..count).map { d -> Dates.fromPersian(st.y, st.m, d).let { it to Events.forDay(it) } }
-    }
-    val sel = Dates.info(st.selected, Prefs.offset)
+    val base = remember { Dates.info(today).fa.let { it.y * 12 + it.m - 1 } }
+    val pager = rememberPagerState(MID) { 1200 }
+    val scope = rememberCoroutineScope()
+    val idx = base + pager.currentPage - MID
+    val y = Math.floorDiv(idx, 12)
+    val m = Math.floorMod(idx, 12) + 1
+    var editing by remember { mutableStateOf<Ev?>(null) }
+    var adding by remember { mutableStateOf(false) }
 
-    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp)) {
-        MonthBar("${Dates.faMonths[st.m - 1]} ${st.y.fa()}", { vm.month(-1) }, { vm.month(1) })
-        Row(Modifier.fillMaxWidth().padding(vertical = 10.dp)) {
-            Dates.weekdays.forEachIndexed { i, w ->
-                Text(w.take(1), Modifier.weight(1f), textAlign = TextAlign.Center, color = if (i == 6) cs.error else cs.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
+    Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        UpdateBanner()
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text("${Dates.faMonths[m - 1]} ${y.fa()}", style = MaterialTheme.typography.headlineMedium)
+                Text(span(y, m), color = cs.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+            }
+            OutlinedButton({ scope.launch { pager.animateScrollToPage(MID) }; vm.select(today) }) { Text("امروز") }
+        }
+        Panel(pad = 8.dp) {
+            Row(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+                Dates.weekdays.forEachIndexed { k, w ->
+                    Text(w.take(1), Modifier.weight(1f), textAlign = TextAlign.Center, color = if (k == 6) cs.error else cs.onSurfaceVariant, style = MaterialTheme.typography.labelLarge)
+                }
+            }
+            HorizontalPager(state = pager, modifier = Modifier.fillMaxWidth().height(324.dp)) { p ->
+                val i = base + p - MID
+                MonthGrid(Math.floorDiv(i, 12), Math.floorMod(i, 12) + 1, sel, today) { vm.select(it) }
             }
         }
-        repeat((first + count + 6) / 7) { r ->
-            Row(Modifier.fillMaxWidth()) {
+        DayPanel(sel, { adding = true }) { editing = it }
+    }
+    if (adding || editing != null) EventDialog(editing, sel) { adding = false; editing = null }
+}
+
+@Composable
+private fun MonthGrid(y: Int, m: Int, selected: LocalDate, today: LocalDate, onSelect: (LocalDate) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val first = remember(y, m) { Dates.firstColumn(y, m) }
+    val count = remember(y, m) { Dates.monthLength(y, m) }
+    val days = remember(y, m, Prefs.offset, Prefs.world, Prefs.religious, Events.all) {
+        (1..count).map { d -> Dates.fromPersian(y, m, d).let { it to Events.forDay(it) } }
+    }
+    val shape = RoundedCornerShape(14.dp)
+    Column(Modifier.fillMaxSize()) {
+        repeat(6) { r ->
+            Row(Modifier.weight(1f).fillMaxWidth()) {
                 repeat(7) { c ->
                     val day = r * 7 + c - first + 1
-                    Box(Modifier.weight(1f).aspectRatio(1f).padding(2.dp), Alignment.Center) {
+                    Box(Modifier.weight(1f).fillMaxHeight().padding(2.dp), Alignment.Center) {
                         if (day in 1..count) {
                             val (d, evs) = days[day - 1]
-                            val isSel = d == st.selected
+                            val isSel = d == selected
                             val hot = c == 6 || evs.any { it.h }
-                            val bg = when { isSel -> cs.primary; d == today -> cs.surfaceVariant; else -> cs.background }
                             val fg = when { isSel -> cs.onPrimary; hot -> cs.error; else -> cs.onBackground }
-                            Column(Modifier.fillMaxSize().clip(RoundedCornerShape(14.dp)).background(bg).clickable { vm.select(d) }, Arrangement.Center, Alignment.CenterHorizontally) {
-                                Text(day.fa(), color = fg, style = MaterialTheme.typography.bodyLarge, fontWeight = if (d == today) FontWeight.Bold else null)
-                                if (evs.isNotEmpty()) Box(Modifier.size(5.dp).clip(CircleShape).background(if (isSel) cs.onPrimary else if (hot) cs.error else cs.secondary))
+                            Column(
+                                Modifier.fillMaxSize().clip(shape).background(if (isSel) cs.primary else Color.Transparent)
+                                    .then(if (d == today && !isSel) Modifier.border(1.5.dp, cs.primary, shape) else Modifier)
+                                    .clickable { onSelect(d) },
+                                Arrangement.Center, Alignment.CenterHorizontally,
+                            ) {
+                                Text(day.fa(), color = fg, style = MaterialTheme.typography.bodyLarge, fontWeight = FontWeight.SemiBold)
+                                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+                                    Text(d.dayOfMonth.fa(), color = fg.copy(alpha = 0.6f), fontSize = 11.sp, lineHeight = 14.sp)
+                                    if (evs.isNotEmpty()) Box(Modifier.size(5.dp).clip(CircleShape).background(if (isSel) cs.onPrimary else if (hot) cs.error else cs.secondary))
+                                }
                             }
                         }
                     }
                 }
             }
         }
-        Spacer(Modifier.height(14.dp))
-        Panel {
-            Text("${sel.weekday} ${sel.fa.d.fa()} ${Dates.faMonths[sel.fa.m - 1]}", style = MaterialTheme.typography.titleMedium)
-            Text(listOfNotNull(sel.greg.label(), if (Prefs.hijri) sel.hijri.hijriLabel() else null).joinToString(" · "), color = cs.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun DayPanel(d: LocalDate, onAdd: () -> Unit, onEdit: (Ev) -> Unit) {
+    val cs = MaterialTheme.colorScheme
+    val x = Dates.info(d, Prefs.offset)
+    val evs = Events.forDay(d)
+    val official = evs.any { it.h }
+    Panel {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            DayTile(x.fa.d.fa(), 64.dp)
+            Spacer(Modifier.width(14.dp))
+            Column(Modifier.weight(1f)) {
+                Text("${x.weekday} ${Dates.faMonths[x.fa.m - 1]} ${x.fa.y.fa()}", style = MaterialTheme.typography.titleMedium)
+                Text(listOfNotNull(x.greg.label(), if (Prefs.hijri) x.hijri.hijriLabel() else null).joinToString(" · "), color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+            }
+            if (official || x.friday) Tag(if (official) "تعطیل رسمی" else "جمعه", true)
         }
-        Spacer(Modifier.height(12.dp))
-        EventsPanel("مناسبت‌های این روز", Events.forDay(st.selected))
+        Spacer(Modifier.height(8.dp))
+        if (evs.isEmpty()) Text("مناسبتی برای این روز ثبت نشده است.", color = cs.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
+        evs.forEach { e -> EventLine(e) { onEdit(e) } }
+        Spacer(Modifier.height(8.dp))
+        FilledTonalButton(onAdd, Modifier.fillMaxWidth().height(52.dp)) {
+            Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("افزودن مناسبت")
+        }
     }
 }
