@@ -19,7 +19,12 @@ import androidx.compose.ui.unit.dp
 /** اجزای مشترک رابط کاربری (سطح شیشه‌ای، برچسب، ردیف مناسبت، چیپ و سوییچ) */
 @Composable
 fun Panel(modifier: Modifier = Modifier, pad: Dp = 18.dp, content: @Composable ColumnScope.() -> Unit) {
-    Card(modifier.fillMaxWidth(), MaterialTheme.shapes.medium, CardDefaults.cardColors(glassFill()), border = BorderStroke(1.dp, glassStroke())) {
+    Card(
+        modifier.fillMaxWidth(), MaterialTheme.shapes.medium,
+        // contentColor صریح: بدون آن، در تم تاریک متن‌ها سیاه می‌ماند
+        CardDefaults.cardColors(containerColor = glassFill(), contentColor = MaterialTheme.colorScheme.onSurface),
+        border = BorderStroke(1.dp, glassStroke()),
+    ) {
         Column(Modifier.padding(pad), content = content)
     }
 }
@@ -70,7 +75,9 @@ fun UpdateBanner() {
         is Updater.S.New -> Panel {
             Text("نسخهٔ جدید ${s.tag} آماده است", style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(10.dp))
-            Button({ Updater.install(ctx, s.url) }, Modifier.fillMaxWidth().height(52.dp)) { Text("بروزرسانی") }
+            Button({ Updater.install(ctx, s.url) }, Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(Ic.Download, null); Spacer(Modifier.width(8.dp)); Text("بروزرسانی")
+            }
         }
         is Updater.S.Busy -> Panel {
             Text("در حال دانلود… ${s.pct.fa()}٪")

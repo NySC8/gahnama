@@ -1,5 +1,7 @@
 package ir.gahnama
 
+import androidx.compose.animation.*
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -10,14 +12,13 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -56,19 +57,25 @@ fun CalendarScreen(vm: CalendarViewModel = viewModel()) {
     val pager = rememberPagerState(MID) { 1200 }
     val scope = rememberCoroutineScope()
     val idx = base + pager.currentPage - MID
-    val y = Math.floorDiv(idx, 12)
-    val m = Math.floorMod(idx, 12) + 1
     var editing by remember { mutableStateOf<Ev?>(null) }
     var adding by remember { mutableStateOf(false) }
+    val showBanner = Updater.state.let { it is Updater.S.New || it is Updater.S.Busy || it is Updater.S.Err }
 
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        UpdateBanner()
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("${Dates.faMonths[m - 1]} ${y.fa()}", style = MaterialTheme.typography.headlineMedium)
-                Text(span(y, m), color = cs.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+        Column {
+            AnimatedVisibility(showBanner, enter = expandVertically() + fadeIn(), exit = shrinkVertically() + fadeOut()) {
+                Column { UpdateBanner(); Spacer(Modifier.height(12.dp)) }
             }
-            OutlinedButton({ scope.launch { pager.animateScrollToPage(MID) }; vm.select(today) }) { Text("امروز") }
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                AnimatedContent(idx, Modifier.weight(1f), transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) }, label = "month") { i ->
+                    val y = Math.floorDiv(i, 12); val m = Math.floorMod(i, 12) + 1
+                    Column {
+                        Text("${Dates.faMonths[m - 1]} ${y.fa()}", style = MaterialTheme.typography.headlineMedium)
+                        Text(span(y, m), color = cs.onSurfaceVariant, style = MaterialTheme.typography.labelMedium)
+                    }
+                }
+                OutlinedButton({ scope.launch { pager.animateScrollToPage(MID) }; vm.select(today) }) { Text("امروز") }
+            }
         }
         Panel(pad = 8.dp) {
             Row(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
@@ -105,9 +112,12 @@ private fun MonthGrid(y: Int, m: Int, selected: LocalDate, today: LocalDate, onS
                             val (d, evs) = days[day - 1]
                             val isSel = d == selected
                             val hot = c == 6 || evs.any { it.h }
-                            val fg = when { isSel -> cs.onPrimary; hot -> cs.error; else -> cs.onBackground }
+                            // انتخاب روز با انیمیشن نرم رنگ و اندازه
+                            val bg by animateColorAsState(if (isSel) cs.primary else Color.Transparent, tween(220), label = "bg")
+                            val fg by animateColorAsState(when { isSel -> cs.onPrimary; hot -> cs.error; else -> cs.onBackground }, tween(220), label = "fg")
+                            val sc by androidx.compose.animation.core.animateFloatAsState(if (isSel) 1f else 0.94f, tween(220), label = "sc")
                             Column(
-                                Modifier.fillMaxSize().clip(shape).background(if (isSel) cs.primary else Color.Transparent)
+                                Modifier.fillMaxSize().graphicsLayer { scaleX = sc; scaleY = sc }.clip(shape).background(bg)
                                     .then(if (d == today && !isSel) Modifier.border(1.5.dp, cs.primary, shape) else Modifier)
                                     .clickable { onSelect(d) },
                                 Arrangement.Center, Alignment.CenterHorizontally,
@@ -128,11 +138,22 @@ private fun MonthGrid(y: Int, m: Int, selected: LocalDate, today: LocalDate, onS
 
 @Composable
 private fun DayPanel(d: LocalDate, onAdd: () -> Unit, onEdit: (Ev) -> Unit) {
+    Panel(Modifier.animateContentSize()) {
+        AnimatedContent(d, transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(100)) }, label = "day") { dd -> DayBody(dd, onEdit) }
+        Spacer(Modifier.height(8.dp))
+        FilledTonalButton(onAdd, Modifier.fillMaxWidth().height(52.dp)) {
+            Icon(Ic.Add, null); Spacer(Modifier.width(8.dp)); Text("افزودن مناسبت")
+        }
+    }
+}
+
+@Composable
+private fun DayBody(d: LocalDate, onEdit: (Ev) -> Unit) {
     val cs = MaterialTheme.colorScheme
     val x = Dates.info(d, Prefs.offset)
     val evs = Events.forDay(d)
     val official = evs.any { it.h }
-    Panel {
+    Column {
         Row(verticalAlignment = Alignment.CenterVertically) {
             DayTile(x.fa.d.fa(), 64.dp)
             Spacer(Modifier.width(14.dp))
@@ -145,9 +166,5 @@ private fun DayPanel(d: LocalDate, onAdd: () -> Unit, onEdit: (Ev) -> Unit) {
         Spacer(Modifier.height(8.dp))
         if (evs.isEmpty()) Text("مناسبتی برای این روز ثبت نشده است.", color = cs.onSurfaceVariant, modifier = Modifier.padding(vertical = 8.dp))
         evs.forEach { e -> EventLine(e) { onEdit(e) } }
-        Spacer(Modifier.height(8.dp))
-        FilledTonalButton(onAdd, Modifier.fillMaxWidth().height(52.dp)) {
-            Icon(Icons.Default.Add, null); Spacer(Modifier.width(8.dp)); Text("افزودن مناسبت")
-        }
     }
 }

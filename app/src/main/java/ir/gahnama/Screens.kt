@@ -8,15 +8,28 @@ import android.os.Build
 import android.provider.Settings
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -42,14 +55,16 @@ fun EventsScreen() {
     LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
         item {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                FilledTonalButton({ step(-1) }) { Text("قبل") }
-                Text("${Dates.faMonths[m - 1]} ${y.fa()}", Modifier.weight(1f), textAlign = TextAlign.Center, style = MaterialTheme.typography.headlineMedium)
-                FilledTonalButton({ step(1) }) { Text("بعد") }
+                FilledTonalIconButton({ step(-1) }) { Icon(Ic.Right, "ماه قبل") }
+                AnimatedContent(y * 12 + m, Modifier.weight(1f), transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(120)) }, label = "t") { _ ->
+                    Text("${Dates.faMonths[m - 1]} ${y.fa()}", Modifier.fillMaxWidth(), textAlign = TextAlign.Center, style = MaterialTheme.typography.headlineMedium)
+                }
+                FilledTonalIconButton({ step(1) }) { Icon(Ic.Left, "ماه بعد") }
             }
         }
         if (rows.isEmpty()) item { Text("مناسبتی برای این ماه ثبت نشده است.", color = cs.onSurfaceVariant) }
-        items(rows) { r ->
-            Panel {
+        items(rows, key = { it.d }) { r ->
+            Panel(Modifier.animateItem()) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     DayTile(r.d.fa())
                     Spacer(Modifier.width(14.dp))
@@ -67,19 +82,17 @@ fun EventsScreen() {
 @Composable
 fun SettingsScreen() {
     val ctx = LocalContext.current
+    val cs = MaterialTheme.colorScheme
     val ask = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { ok ->
         Prefs.update { notif = ok }; Notifier.refresh(ctx)
     }
-    val fonts = remember { Fonts.names(ctx) }
     var sure by remember { mutableStateOf(false) }
     Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text("تنظیمات", style = MaterialTheme.typography.headlineMedium)
         Section("ظاهر") {
             Chips(listOf("سیستم", "روشن", "تاریک"), Prefs.theme) { k -> Prefs.update { theme = k } }
-            Text("فونت", Modifier.padding(top = 12.dp, bottom = 6.dp), style = MaterialTheme.typography.titleMedium)
-            Chips(listOf("وزیرمتن") + fonts, if (Prefs.font in fonts) fonts.indexOf(Prefs.font) + 1 else 0) { k -> Prefs.update { font = if (k == 0) "" else fonts[k - 1] } }
-            Text("فونت دلخواه: پوشه‌ای با نام فونت در app/src/main/assets/fonts/ بسازید و فایل regular.ttf (و در صورت وجود bold.ttf) را داخلش بگذارید.",
-                Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+            Text("رنگ‌بندی", Modifier.padding(top = 12.dp, bottom = 8.dp), style = MaterialTheme.typography.titleMedium)
+            Swatches()
         }
         Section("مناسبت‌ها و تاریخ") {
             Toggle("مناسبت‌های مذهبی", Prefs.religious) { v -> Prefs.update { religious = v } }
@@ -90,29 +103,49 @@ fun SettingsScreen() {
                 Prefs.update { offset = k - 2 }; Notifier.refresh(ctx)
             }
             Text("اگر تاریخ قمری یا مناسبت‌های مذهبی با تقویم رسمی یک روز اختلاف دارد، اینجا اصلاح کنید. مناسبت‌ها را هم با زدن روی هر کدام در صفحهٔ تقویم می‌توانید ویرایش یا حذف کنید.",
-                Modifier.padding(top = 8.dp), color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                Modifier.padding(top = 8.dp), color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
             TextButton({ if (sure) { Events.reset(ctx); sure = false } else sure = true }) {
-                Text(if (sure) "برای تأیید دوباره بزنید (ویرایش‌ها پاک می‌شود)" else "بازنشانی مناسبت‌ها به پیش‌فرض", color = MaterialTheme.colorScheme.error)
+                Text(if (sure) "برای تأیید دوباره بزنید (ویرایش‌ها پاک می‌شود)" else "بازنشانی مناسبت‌ها به پیش‌فرض", color = cs.error)
             }
         }
-        Section("نوار وضعیت") {
+        Section("نوار وضعیت و ویجت") {
             Toggle("نمایش عدد روز در نوار بالای گوشی", Prefs.notif) { on ->
                 if (on && Build.VERSION.SDK_INT >= 33 && ctx.checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED)
                     ask.launch(Manifest.permission.POST_NOTIFICATIONS)
                 else { Prefs.update { notif = on }; Notifier.refresh(ctx) }
             }
             Text("برای تغییر خودکار عدد در نیمه‌شب، در تنظیمات برنامه «شروع خودکار» را روشن و باتری را «بدون محدودیت» کنید (گوشی‌های شیائومی).",
-                color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
             TextButton({ ctx.startActivity(Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:${ctx.packageName}"))) }) { Text("باز کردن تنظیمات برنامه") }
+            Text("ویجت: صفحهٔ اصلی گوشی را نگه دارید ← ویجت‌ها ← گاه‌نما.", Modifier.padding(top = 4.dp), color = cs.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
         }
         Section("بروزرسانی") {
             Text("نسخهٔ فعلی: ${Updater.versionName(ctx)}")
             val s = Updater.state
-            Text(when (s) { is Updater.S.Latest -> "نسخهٔ شما به‌روز است"; is Updater.S.New -> "نسخهٔ ${s.tag} آماده است (در صفحهٔ تقویم)"; is Updater.S.Err -> s.msg; else -> "" },
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(when (s) { is Updater.S.Latest -> "نسخهٔ شما به‌روز است"; is Updater.S.New -> "نسخهٔ ${s.tag} آماده است (در صفحهٔ تقویم)"; is Updater.S.Err -> s.msg; else -> "" }, color = cs.onSurfaceVariant)
             FilledTonalButton({ Updater.check(ctx, true) }, Modifier.padding(top = 8.dp).fillMaxWidth().height(52.dp)) { Text("بررسی بروزرسانی") }
         }
     }
+}
+
+/** انتخاب رنگ‌بندی با دایره‌های رنگی؛ حلقهٔ انتخاب با انیمیشن ظاهر می‌شود */
+@Composable
+private fun Swatches() {
+    val dark = LocalDark.current
+    val cs = MaterialTheme.colorScheme
+    Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Palettes.forEachIndexed { k, p ->
+            val scheme = if (dark) p.dark else p.light
+            val sel = Prefs.palette == k
+            val ring by animateColorAsState(if (sel) cs.onSurface else Color.Transparent, tween(200), label = "ring")
+            Box(
+                Modifier.size(52.dp).border(2.5.dp, ring, CircleShape).padding(4.dp).clip(CircleShape).background(scheme.primary)
+                    .clickable { Prefs.update { palette = k } },
+                Alignment.Center,
+            ) { if (sel) Icon(Ic.Check, null, tint = scheme.onPrimary) }
+        }
+    }
+    Text(Palettes[Prefs.palette.coerceIn(0, Palettes.lastIndex)].name, Modifier.padding(top = 8.dp), color = cs.onSurfaceVariant)
 }
 
 @Composable

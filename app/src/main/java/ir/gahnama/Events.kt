@@ -31,7 +31,8 @@ object Events {
         val p = c.applicationContext.getSharedPreferences("events", Context.MODE_PRIVATE)
         sp = p
         val defaults = parse(c.assets.open("events.json").bufferedReader().use { it.readText() })
-        val saved = p.getString("list", null)?.let { parse(it) }
+        // اگر دادهٔ ذخیره‌شده خراب باشد، به‌جای کرش، پیش‌فرض‌ها برمی‌گردند
+        val saved = runCatching { p.getString("list", null)?.let { parse(it) } }.getOrNull()
         deleted = p.getStringSet("deleted", emptySet()) ?: emptySet()
         all = when {
             saved == null -> defaults

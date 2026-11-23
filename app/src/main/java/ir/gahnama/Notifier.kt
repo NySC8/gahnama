@@ -18,15 +18,16 @@ import androidx.core.graphics.drawable.IconCompat
 import java.time.LocalDate
 import java.time.ZoneId
 
-/** نمایش عدد روز در نوار وضعیت (اعلان دائمی) و به‌روزرسانی خودکار نیمه‌شب. */
+/** به‌روزرسانی عدد روز: اعلان نوار وضعیت + ویجت. آلارم نیمه‌شب هر دو را تازه می‌کند. */
 object Notifier {
     private const val CH = "day"
     private const val ID = 1
 
     fun refresh(c: Context) {
         Prefs.init(c); Events.load(c)
-        val nm = c.getSystemService(NotificationManager::class.java)
         schedule(c)
+        DayWidget.update(c)
+        val nm = c.getSystemService(NotificationManager::class.java)
         if (!Prefs.notif) { nm.cancel(ID); return }
         if (Build.VERSION.SDK_INT >= 26)
             nm.createNotificationChannel(NotificationChannel(CH, "تاریخ روز", NotificationManager.IMPORTANCE_LOW).apply { setShowBadge(false) })
@@ -48,11 +49,10 @@ object Notifier {
         nm.notify(ID, n)
     }
 
-    /** آلارم نیمه‌شب با RTC_WAKEUP (گوشی را از خواب بیدار می‌کند)؛ هر بار اجرا، آلارم بعدی را می‌گذارد. */
+    /** آلارم نیمه‌شب با RTC_WAKEUP؛ هر بار اجرا، آلارم بعدی را می‌گذارد. */
     private fun schedule(c: Context) {
         val am = c.getSystemService(AlarmManager::class.java)
         val pi = PendingIntent.getBroadcast(c, 1, Intent(c, DayReceiver::class.java), PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT)
-        if (!Prefs.notif) { am.cancel(pi); return }
         val t = LocalDate.now().plusDays(1).atStartOfDay(ZoneId.systemDefault()).toInstant().toEpochMilli() + 5_000
         if (Build.VERSION.SDK_INT < 31 || am.canScheduleExactAlarms()) am.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi)
         else am.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, t, pi)
